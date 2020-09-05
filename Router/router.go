@@ -4,9 +4,6 @@ import (
 	"github.com/d97arkslayer/go-entry-challenge/Controllers"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"log"
-	"net/http"
-	"os"
 	"time"
 )
 
@@ -14,7 +11,7 @@ import (
  * Router
  * Use to init the CHI router, and add server routes
  */
-func Router(){
+func Router() *chi.Mux {
 	router := chi.NewRouter()
 	// A good base middleware stack
 	router.Use(middleware.RequestID)
@@ -22,11 +19,8 @@ func Router(){
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Timeout(60 * time.Second))
+	// Routes
 	router.Get("/", Controllers.IndexBuyers)
 
-	PORT := os.Getenv("PORT")
-	if PORT == "" {
-		PORT = "3000"
-	}
-	log.Fatal(http.ListenAndServe(":" + PORT, router))
+	return router
 }
