@@ -5,7 +5,8 @@ package Models
  * Model schema to buyer entity
  */
 type Buyer struct {
-	Id string `json:"id"`
+	Id   string `json:"id"`
 	Name string `json:"name"`
-	Age int `json:"age"`
+	Age  int    `json:"age"`
+	Type string `json:"type,omitempty"`
 }

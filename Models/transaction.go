@@ -10,4 +10,5 @@ type Transaction struct {
 	Ip string `json:"ip"`
 	Device string `json:"device"`
 	ProductIds []string `json:"productIds"`
+	Type string `json:"type"`
 }
