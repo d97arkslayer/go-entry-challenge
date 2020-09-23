@@ -17,6 +17,7 @@ import (
  */
 func InsertBuyer(buyer Models.Buyer)(bool, Models.Buyer, error){
 	var storedBuyer Models.Buyer
+	buyer.Type = "BUYER"
 	ctx := context.TODO()
 	dGraph, cancel := Database.GetDgraphClient()
 	defer cancel()
@@ -114,6 +115,5 @@ func IndexBuyers() (*Types.Buyers, error) {
 		log.Println("Error unmarshall the buyers, Error: ", err.Error())
 		return nil, err
 	}
-	log.Printf("%+v\n", buyers)
 	return buyers, nil
 }
