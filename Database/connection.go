@@ -6,6 +6,7 @@ import (
 	"github.com/dgraph-io/dgo/v2/protos/api"
 	"google.golang.org/grpc"
 	"log"
+	"os"
 )
 
 
@@ -15,7 +16,7 @@ import (
  * Use to get DGraph client connection
  */
 func GetDgraphClient() (*dgo.Dgraph, Types.CancelFunc) {
-	conn, err := grpc.Dial("127.0.0.1:9080", grpc.WithInsecure())
+	conn, err := grpc.Dial(os.Getenv("DATABASE_HOST"), grpc.WithInsecure())
 	if err != nil {
 		log.Fatal("While trying to dial gRPC")
 	}
