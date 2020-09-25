@@ -3,7 +3,6 @@ package Repositories
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/d97arkslayer/go-entry-challenge/Database"
 	"github.com/d97arkslayer/go-entry-challenge/Models"
 	"github.com/d97arkslayer/go-entry-challenge/Types"
@@ -18,6 +17,7 @@ import (
 func InsertProduct(product Models.Product)(bool, Models.Product, error){
 	var storedProduct Models.Product
 	product.Type = "PRODUCT"
+	product.DType = []string{"Product"}
 	ctx := context.TODO()
 	dGraph, cancel := Database.GetDgraphClient()
 	defer cancel()
@@ -27,6 +27,13 @@ func InsertProduct(product Models.Product)(bool, Models.Product, error){
 		name: string .
 		price: float .
 		type: string @index(exact) .
+
+		type Product {
+			id: string
+			name: string
+			price: float
+			type: string
+		}
 	`
 	if err := dGraph.Alter(ctx, op); err != nil {
 		log.Println("Error alter DGraph, Error: ", err)
@@ -42,19 +49,17 @@ func InsertProduct(product Models.Product)(bool, Models.Product, error){
 		return false, storedProduct, err
 	}
 	mu.SetJson = pb
-	response, err := dGraph.NewTxn().Mutate(ctx, mu)
+	_, err = dGraph.NewTxn().Mutate(ctx, mu)
 	if err != nil {
 		log.Println("failed to marshal", err)
 		return false, storedProduct, err
 	}
-	print("res: %v", response)
 	variables := map[string]string{"$id":product.Id}
 	q := `query Product($id: string){
 		product(func: eq(id, $id)) {
 			id
 			name
 			price
-			type
 		}
 	}`
 	resp, err := dGraph.NewTxn().QueryWithVars(ctx, q, variables)
@@ -72,7 +77,6 @@ func InsertProduct(product Models.Product)(bool, Models.Product, error){
 		return false, storedProduct, err
 	}
 	storedProduct = r.Product[0]
-	fmt.Printf("%+v\n", storedProduct)
 	return true, storedProduct, nil
 }
 
@@ -101,7 +105,6 @@ func IndexProducts() (*Types.Products, error) {
 			id,
 			name,
 			price,
-			type
 		 }
 		}`
 	res, err := dGraph.NewTxn().QueryWithVars(ctx, q, map[string]string{"$a":"PRODUCT"})

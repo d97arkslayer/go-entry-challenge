@@ -30,14 +30,20 @@ func GetAllData(writer http.ResponseWriter, request *http.Request){
 		return
 	}
 	date := dateTime.Unix()
-	/*err = storeBuyers(date)
+	err = storeBuyers(date)
 	if err != nil {
 		http.Error(writer, "Error getting the buyers data, Error: " + err.Error(), http.StatusBadRequest)
 		return
-	}*/
+	}
 	err = storeProducts(date)
 	if err != nil {
 		http.Error(writer, "Error getting the products data, Error: " + err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = storeTransactions(date)
+	if err != nil {
+		http.Error(writer, "Error getting the transactions data, Error: " + err.Error(), http.StatusBadRequest)
+		return
 	}
 	writer.WriteHeader(http.StatusOK)
 }
@@ -117,6 +123,59 @@ func storeBuyers(date int64) error {
 		if status != true {
 			fmt.Println("Can not insert data on DGraph")
 			return errors.New("can not insert data on dgraph")
+		}
+	}
+	return nil
+}
+
+/**
+ * storeTransactions
+ * Use to get transactions data and store in DGraph
+ */
+func storeTransactions(date int64) error{
+	transactionsUrl := os.Getenv("TRANSACTIONS_HOST") + "?date=" + strconv.FormatInt(date, 10)
+	response, err := http.Get(transactionsUrl)
+	defer response.Body.Close()
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		fmt.Println("Error getting transactions data, Error: "+ err.Error())
+		return err
+	}
+	stringBody := string(body)
+	splitBody := strings.Split(stringBody, "#")
+	for _, item := range splitBody {
+		if len(item) >= 1 {
+			str := item
+			runes := []rune(str)
+			var asciiCodes [] string
+			for i := 0; i < len(runes); i++ {
+				if int(runes[i]) == 0{
+					asciiCodes = append(asciiCodes, string(rune(32)))
+				} else{
+					asciiCodes = append(asciiCodes, string(runes[i]))
+				}
+			}
+			newItem := strings.Join(asciiCodes,"")
+			newTrimItem := strings.TrimSpace(newItem)
+			splitItem := strings.Fields(newTrimItem)
+			var transaction Models.Transaction
+			transaction.Id = splitItem[0]
+			transaction.BuyerId = splitItem[1]
+			transaction.Ip = splitItem[2]
+			transaction.Device = splitItem[3]
+			refinedDevices := strings.ReplaceAll(splitItem[4],"(","")
+			refinedDevices = strings.ReplaceAll(refinedDevices,")","")
+			splitDevices := strings.Split(refinedDevices,",")
+			transaction.ProductIds = splitDevices
+			status,_,err := Repositories.InsertTransaction(transaction)
+			if err != nil {
+				fmt.Println("Error inserting transaction on DGraph, Error: " + err.Error())
+				return err
+			}
+			if status != true {
+				fmt.Println("Can not insert the transaction on dgraph")
+				return errors.New("can not insert the transaction on dgraph")
+			}
 		}
 	}
 	return nil

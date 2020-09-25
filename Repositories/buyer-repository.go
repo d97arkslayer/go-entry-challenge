@@ -17,6 +17,7 @@ import (
 func InsertBuyer(buyer Models.Buyer)(bool, Models.Buyer, error){
 	var storedBuyer Models.Buyer
 	buyer.Type = "BUYER"
+	buyer.DType = []string{"Buyer"}
 	ctx := context.TODO()
 	dGraph, cancel := Database.GetDgraphClient()
 	defer cancel()
@@ -26,6 +27,13 @@ func InsertBuyer(buyer Models.Buyer)(bool, Models.Buyer, error){
 		name: string .
 		age: int .
 		type: string @index(exact) .
+
+		type Buyer {
+			id: string
+			name: string
+			age: int
+			type: string
+		}
 	`
 	if err := dGraph.Alter(ctx, op); err != nil {
 		log.Println("Error alter DGraph, Error: ", err)
@@ -41,19 +49,17 @@ func InsertBuyer(buyer Models.Buyer)(bool, Models.Buyer, error){
 		return false, storedBuyer, err
 	}
 	mu.SetJson = bb
-	response, err := dGraph.NewTxn().Mutate(ctx, mu)
+	_, err = dGraph.NewTxn().Mutate(ctx, mu)
 	if err != nil {
 		log.Println("failed to marshal", err)
 		return false, storedBuyer, err
 	}
-	print("res: %v", response)
 	variables := map[string]string{"$id":buyer.Id}
 	q := `query Me($id: string){
 		me(func: eq(id, $id)) {
-			id
-			name
-			age
-			type
+			id,
+			name,
+			age,
 		}
 	}`
 	resp, err := dGraph.NewTxn().QueryWithVars(ctx, q, variables)
@@ -98,8 +104,7 @@ func IndexBuyers() (*Types.Buyers, error) {
 		  buyers(func: eq(type, $a)) {
 			id,
 			name,
-			age,
-			type
+			age
 		 }
 		}`
 	res, err := dGraph.NewTxn().QueryWithVars(ctx, q, map[string]string{"$a":"BUYER"})

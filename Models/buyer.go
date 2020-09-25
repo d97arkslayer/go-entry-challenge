@@ -9,4 +9,5 @@ type Buyer struct {
 	Name string `json:"name"`
 	Age  int    `json:"age"`
 	Type string `json:"type,omitempty"`
+	DType []string `json:"dgraph.type,omitempty"`
 }

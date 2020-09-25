@@ -22,6 +22,7 @@ func Router() *chi.Mux {
 	// Routes
 	router.Get("/buyers", Controllers.IndexBuyers)
 	router.Get("/products", Controllers.IndexProducts)
+	router.Get("/transactions", Controllers.IndexTransactions)
 	router.Post("/buyers", Controllers.StoreBuyer)
 	router.Post("/get-data", Controllers.GetAllData)
 
