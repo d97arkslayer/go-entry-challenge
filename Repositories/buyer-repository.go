@@ -3,7 +3,6 @@ package Repositories
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/d97arkslayer/go-entry-challenge/Database"
 	"github.com/d97arkslayer/go-entry-challenge/Models"
 	"github.com/d97arkslayer/go-entry-challenge/Types"
@@ -72,7 +71,6 @@ func InsertBuyer(buyer Models.Buyer)(bool, Models.Buyer, error){
 		return false, storedBuyer, err
 	}
 	storedBuyer = r.Me[0]
-	fmt.Printf("%+v\n", storedBuyer)
 	return true, storedBuyer, nil
 }
 

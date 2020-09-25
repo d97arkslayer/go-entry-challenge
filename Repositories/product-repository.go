@@ -25,7 +25,7 @@ func InsertProduct(product Models.Product)(bool, Models.Product, error){
 	op.Schema = `
 		id: string @index(exact) .
 		name: string .
-		price: int .
+		price: float .
 		type: string @index(exact) .
 	`
 	if err := dGraph.Alter(ctx, op); err != nil {
@@ -36,17 +36,18 @@ func InsertProduct(product Models.Product)(bool, Models.Product, error){
 		CommitNow: true,
 	}
 
-	bb, err := json.Marshal(product)
+	pb, err := json.Marshal(product)
 	if err != nil {
 		log.Println("failed to marshal", err)
 		return false, storedProduct, err
 	}
-	mu.SetJson = bb
-	_, err = dGraph.NewTxn().Mutate(ctx, mu)
+	mu.SetJson = pb
+	response, err := dGraph.NewTxn().Mutate(ctx, mu)
 	if err != nil {
 		log.Println("failed to marshal", err)
 		return false, storedProduct, err
 	}
+	print("res: %v", response)
 	variables := map[string]string{"$id":product.Id}
 	q := `query Product($id: string){
 		product(func: eq(id, $id)) {
