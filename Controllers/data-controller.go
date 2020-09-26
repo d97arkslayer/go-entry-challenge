@@ -45,7 +45,7 @@ func GetAllData(writer http.ResponseWriter, request *http.Request){
 		http.Error(writer, "Error getting the transactions data, Error: " + err.Error(), http.StatusBadRequest)
 		return
 	}
-	writer.WriteHeader(http.StatusOK)
+	writer.WriteHeader(http.StatusCreated)
 }
 
 

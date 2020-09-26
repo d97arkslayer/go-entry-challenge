@@ -21,6 +21,7 @@ func Router() *chi.Mux {
 	router.Use(middleware.Timeout(60 * time.Second))
 	// Routes
 	router.Get("/buyers", Controllers.IndexBuyers)
+	router.Get("/buyers/{id}", Controllers.ShowBuyer)
 	router.Get("/products", Controllers.IndexProducts)
 	router.Get("/transactions", Controllers.IndexTransactions)
 	router.Post("/buyers", Controllers.StoreBuyer)

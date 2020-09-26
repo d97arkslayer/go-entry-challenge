@@ -95,10 +95,10 @@ func IndexBuyers() (*Types.Buyers, error) {
 		type: string @index(exact).
 		`
 	ctx := context.TODO()
-	errO:= dGraph.Alter(ctx, op)
-	if errO != nil {
-		log.Println("Error alter operation error: ", errO.Error())
-		return nil, errO
+	err := dGraph.Alter(ctx, op)
+	if err != nil {
+		log.Println("Error alter operation error: ", err.Error())
+		return nil, err
 	}
 	q := `query buyers($a: string) {
 		  buyers(func: eq(type, $a)) {
@@ -119,4 +119,57 @@ func IndexBuyers() (*Types.Buyers, error) {
 		return nil, err
 	}
 	return buyers, nil
+}
+
+/**
+ * GetBuyer
+ * Get buyer info
+ */
+func GetBuyer(id string) (bool, Models.Buyer, error) {
+	var buyer Models.Buyer
+	dGraph, cancel := Database.GetDgraphClient()
+	defer cancel()
+	op := &api.Operation{}
+	op.Schema = `
+		id: string @index(exact) .
+		name: string .
+		age: int .
+		type: string @index(exact).
+		`
+	ctx := context.TODO()
+	err := dGraph.Alter(ctx, op)
+	if err != nil {
+		log.Println("Error alter operation error: ", err.Error())
+		return false, buyer, err
+	}
+	q := `
+		query buyers($a: string) {
+		   buyerInfo as var(func: eq(id, $a)) {
+    			id,
+    			name,
+    			age,
+    			type
+			}
+		buyers(func: uid(buyerInfo)) @filter(eq(type, "BUYER")) {
+    			id,
+    			name,
+    			age
+			}
+		}
+	`
+	res, err := dGraph.NewTxn().QueryWithVars(ctx, q, map[string]string{"$a":id})
+	if err != nil {
+		log.Println("Error getting the buyer info, Error: ", err.Error())
+		return false, buyer, err
+	}
+	var buyers *Types.Buyers
+	err = json.Unmarshal(res.Json, &buyers)
+	if len(buyers.Buyers) < 1 {
+		return false, buyer, nil
+	}
+	if err != nil {
+		log.Println("Error unmarshall the buyers, Error: ", err.Error())
+		return false, buyer, err
+	}
+	return true, buyers.Buyers[0], nil
 }
