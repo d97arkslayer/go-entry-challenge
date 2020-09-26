@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/d97arkslayer/go-entry-challenge/Models"
 	"github.com/d97arkslayer/go-entry-challenge/Repositories"
+	"github.com/d97arkslayer/go-entry-challenge/Types"
 	"github.com/go-chi/chi"
 	"net/http"
 )
@@ -68,8 +69,27 @@ func ShowBuyer(writer http.ResponseWriter, request *http.Request){
 		http.Error(writer, "Can not get the buyer info, because de buyer does not exists", http.StatusNotFound)
 		return
 	}
+	transactions, products, err := Repositories.GetTransactions(buyerId)
+	if err != nil {
+		http.Error(writer, "Error getting the buyer transactions, Error: " + err.Error(), http.StatusBadRequest)
+		return
+	}
+	var buyerResponse Types.BuyerResponse
+	buyerResponse.Buyer = buyer
+	buyerResponse.ShoppingHistory = products
+	var ips []string
+	for _, transaction := range transactions {
+		ips = append(ips, transaction.Ip)
+	}
+	buyersIp, products, err := Repositories.GetBuyersAndProductsWithTheSameIP(ips, buyerId)
+	if err != nil {
+		http.Error(writer, "Error getting the buyers with the same ip, Error: " + err.Error(), http.StatusBadRequest)
+		return
+	}
+	buyerResponse.BuyersIp = buyersIp
+	buyerResponse.ProductRecommendation = products
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusOK)
-	json.NewEncoder(writer).Encode(buyer)
+	json.NewEncoder(writer).Encode(buyerResponse)
 
 }

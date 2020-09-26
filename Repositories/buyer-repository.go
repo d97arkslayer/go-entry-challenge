@@ -3,9 +3,11 @@ package Repositories
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/d97arkslayer/go-entry-challenge/Database"
 	"github.com/d97arkslayer/go-entry-challenge/Models"
 	"github.com/d97arkslayer/go-entry-challenge/Types"
+	"github.com/d97arkslayer/go-entry-challenge/Utils"
 	"github.com/dgraph-io/dgo/v2/protos/api"
 	"log"
 )
@@ -172,4 +174,38 @@ func GetBuyer(id string) (bool, Models.Buyer, error) {
 		return false, buyer, err
 	}
 	return true, buyers.Buyers[0], nil
+}
+
+/**
+ * Use to get the buyers with the ip
+ */
+func GetBuyersAndProductsWithTheSameIP(ips []string, id string) (map[string][]Models.Buyer, []Models.Product,error){
+	var buyers map[string][]Models.Buyer
+	buyers = make(map[string][]Models.Buyer)
+	var products []Models.Product
+	for _,ip := range ips {
+		buyerIds, productIds, err := getBuyersAndProductsWithTheIP(ip, id)
+		if err != nil {
+			return buyers, products, err
+		}
+		for _, buyerId := range buyerIds {
+			 _, buyer, err := GetBuyer(buyerId)
+			 if err != nil {
+			 	fmt.Println("Error getting the buyer info in the same ip, Error: " + err.Error())
+			 	return buyers, products, err
+			 }
+			 buyers[ip] = append(buyers[ip], buyer)
+		}
+		for _, productId := range productIds {
+			_, product, err := GetProduct(productId)
+			if err != nil {
+				fmt.Println("Error getting the product info for recommendation with the same IP, Error: " + err.Error())
+				return buyers, products, err
+			}
+			if Utils.ProductsContains(products, product) == false {
+				products = append(products, product)
+			}
+		}
+	}
+	return buyers, products,nil
 }

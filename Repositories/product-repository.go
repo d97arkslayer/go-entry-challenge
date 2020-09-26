@@ -120,3 +120,55 @@ func IndexProducts() (*Types.Products, error) {
 	}
 	return products, nil
 }
+
+/**
+ * GetProduct
+ * Get product info
+ */
+func GetProduct(id string) (bool, Models.Product, error) {
+	var product Models.Product
+	dGraph, cancel := Database.GetDgraphClient()
+	defer cancel()
+	op := &api.Operation{}
+	op.Schema = `
+		id: string @index(exact) .
+		name: string .
+		price: float .
+		`
+	ctx := context.TODO()
+	err := dGraph.Alter(ctx, op)
+	if err != nil {
+		log.Println("Error alter operation error: ", err.Error())
+		return false, product, err
+	}
+	q := `
+		query products($a: string) {
+		   productInfo as var(func: eq(id, $a)) {
+    			id,
+    			name,
+				price,
+				type
+			}
+			products(func: uid(productInfo)) @filter(eq(type, "PRODUCT")) {
+    			id,
+    			name,
+    			price
+			}
+		}
+	`
+	res, err := dGraph.NewTxn().QueryWithVars(ctx, q, map[string]string{"$a":id})
+	if err != nil {
+		log.Println("Error getting the buyer info, Error: ", err.Error())
+		return false, product, err
+	}
+	var products *Types.Products
+	err = json.Unmarshal(res.Json, &products)
+	if len(products.Products) < 1 {
+		return false, product, nil
+	}
+	if err != nil {
+		log.Println("Error unmarshall the product info, Error: ", err.Error())
+		return false, product, err
+	}
+	return true, products.Products[0], nil
+}

@@ -3,6 +3,7 @@ package Repositories
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/d97arkslayer/go-entry-challenge/Database"
 	"github.com/d97arkslayer/go-entry-challenge/Models"
 	"github.com/d97arkslayer/go-entry-challenge/Types"
@@ -129,4 +130,122 @@ func IndexTransactions() (*Types.Transactions, error) {
 		return nil, err
 	}
 	return transactions, nil
+}
+
+/**
+ * GetTransactions
+ * Use to get all buyer transactions
+ */
+func GetTransactions(buyerId string) ([] Models.Transaction,[] Models.Product, error){
+	var transactions Types.Transactions
+	var products []Models.Product
+	dGraph, cancel := Database.GetDgraphClient()
+	defer cancel()
+	op := &api.Operation{}
+	op.Schema = `
+		id: string @index(exact) .
+		buyerId: string @index(exact) .
+		ip: string @index(exact) .
+		device: string .
+		productIds: [string] .
+		type: string @index(exact) .
+		`
+	ctx := context.TODO()
+	err := dGraph.Alter(ctx, op)
+	if err != nil {
+		log.Println("Error alter operation error: ", err.Error())
+		return transactions.Transactions,products, err
+	}
+	q := `query transactions($a: string) {
+		  transactions(func: eq(buyerId, $a)) {
+			id,
+			buyerId,
+			ip,
+			device,
+			productIds
+		 }
+		}`
+	res, err := dGraph.NewTxn().QueryWithVars(ctx, q, map[string]string{"$a":buyerId})
+	if err != nil {
+		log.Println("Error getting the transactions, Error: ", err.Error())
+		return transactions.Transactions, products, err
+	}
+	err = json.Unmarshal(res.Json, &transactions)
+	if err != nil {
+		log.Println("Error unmarshall the transactions, Error: ", err.Error())
+		return transactions.Transactions, products, err
+	}
+	for _, transaction := range transactions.Transactions {
+		for _, productId := range transaction.ProductIds{
+			_,product, err := GetProduct(productId)
+			if err != nil {
+				fmt.Println("Error getting product id in shopping history, Error: " + err.Error())
+				return transactions.Transactions, products, err
+			}
+			products = append(products, product)
+		}
+	}
+	return transactions.Transactions, products, nil
+}
+
+/**
+ * getBuyersAndProductsWithTheIP
+ */
+func getBuyersAndProductsWithTheIP(ip string, buyerId string)([]string, []string, error){
+	var buyerIds []string
+	var productIds []string
+	type dataTransactions struct {
+		BuyerId string `json:"buyerId"`
+		ProductIds []string `json:"productIds"`
+	}
+	type transactionsArray struct {
+		Transactions []dataTransactions `json:"transactions"`
+	}
+	var transactions transactionsArray
+	dGraph, cancel := Database.GetDgraphClient()
+	defer cancel()
+	op := &api.Operation{}
+	op.Schema = `
+		id: string @index(exact) .
+		buyerId: string @index(exact) .
+		ip: string @index(exact) .
+		device: string .
+		productIds: [string] .
+		type: string @index(exact) .
+		`
+	ctx := context.TODO()
+	err := dGraph.Alter(ctx, op)
+	if err != nil {
+		log.Println("Error alter operation error: ", err.Error())
+		return buyerIds, productIds, err
+	}
+	q := `
+	query transactions($a: string) {
+  		transactionsInfo as var(func: eq(ip, "168.39.68.223")) {
+    		buyerId,
+    		ip,
+    		productIds,
+  		}
+
+  		transactions(func: uid(transactionsInfo)) @filter(not eq(buyerId, "37a56b74"))	{
+    		buyerId
+    		productIds
+  		}
+	}
+	`
+	res, err := dGraph.NewTxn().QueryWithVars(ctx, q, map[string]string{"$a":ip})
+	if err != nil {
+		log.Println("Error getting the transactions with the same IP, Error: ", err.Error())
+		return buyerIds, productIds, err
+	}
+	err = json.Unmarshal(res.Json, &transactions)
+	if err != nil {
+		log.Println("Error unmarshall the transactions with the same IP, Error: ", err.Error())
+		return buyerIds, productIds, err
+	}
+	for _, transaction := range transactions.Transactions {
+		buyerIds = append(buyerIds,transaction.BuyerId)
+		productIds = append(productIds, transaction.ProductIds...)
+	}
+	return buyerIds, productIds, nil
 }
